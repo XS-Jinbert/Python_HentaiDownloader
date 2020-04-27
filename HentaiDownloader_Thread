@@ -20,34 +20,38 @@ def main():
     book.RunThread()
 
 class bookDownload:
-    info = {
-        "bookID": "00",
-        "title": "",
-        "artist": "",
-        "page": {"Number": 0, "DownloadNumber": 1},
-        "saveID": "001",
-        "failPage": {},
-        "bookURL": "https://asmhentai.com/g/",
-        "pageURL": "https://images.asmhentai.com/",
-        "root": "D://HentaiDownloader/"
-    }
     lock = threading.RLock()
+    start = 0.0
+    end = 0.0
 
     def __init__(self, bookID):
-        bookDownload.info["bookID"] = bookID
+        self.info = {
+            "bookID": bookID,
+            "title": "",
+            "artist": "",
+            "page": {"Number": 0, "DownloadNumber": 1},
+            "saveID": "001",
+            "failPage": {},
+            "bookURL": "https://asmhentai.com/g/",
+            "pageURL": "https://images.asmhentai.com/",
+            "root": "D://HentaiDownloader/"
+        }
 
     # 发送请求获取网站html
     def askURL(self):
-        url = bookDownload.info["bookURL"] + bookDownload.info["bookID"]
-        html = ""
-        try:
-            r = requests.get(url, timeout=5)
-            r.raise_for_status()
-            html = r.text
-        except Exception as e:
-            print("请求本子网址出错：", str(e))
-
-        return html
+        i = 0
+        while i < 3:    # 断线则重连3次
+            url = self.info["bookURL"] + self.info["bookID"]
+            html = ""
+            try:
+                r = requests.get(url, timeout=5)
+                r.raise_for_status()
+                html = r.text
+                print(html)
+            except Exception as e:
+                print("\033[1;31m请求本子网址出错：", str(e) + "页\033[0m")
+                i += 1
+            return html
 
     # 获取必要信息
     def Findinfo(self, html):
@@ -58,43 +62,46 @@ class bookDownload:
 
         title = re.findall(findTitle, right)  # 正则表达式收集日文/中文标题
         title[0] = title[0].replace("/", "")
-        bookDownload.info["title"] = title[0]
+        self.info["title"] = title[0]
 
         page = re.findall(findPage, right)  # 正则表达式收集本子页码
-        bookDownload.info["page"]["Number"] = int(page[0])
+        self.info["page"]["Number"] = int(page[0])
 
         artist = re.findall(findArtists, right)  # 正则表达式收集本子作者
         print(artist)
         if(len(artist) > 0):
-            bookDownload.info["artist"] = artist[0]
+            self.info["artist"] = artist[0]
         else:
-            bookDownload.info["artist"] = "ArtistUnknow"
+            self.info["artist"] = "ArtistUnknow"
 
         # 收集info的saveID
         ImageLink = soup.find_all("img", class_="lazy no_image")
         ImageLink = str(ImageLink)
         saveID = re.findall(findSaveID, ImageLink)
-        bookDownload.info["saveID"] = saveID[0]
+        self.info["saveID"] = saveID[0]
 
     # 获取图片内容
     def askImageURL(self, pagenumber):
-        url = bookDownload.info["pageURL"] + bookDownload.info["saveID"] + "/" + bookDownload.info["bookID"] + "/" + pagenumber + ".jpg"
-        try:
-            r = requests.get(url, timeout=5)
-            r.raise_for_status()
-        except Exception as e:
-            print("获取图片出错：", str(e))
-        return r.content
+        i = 0
+        while i < 3:    # 断线则重连3次
+            url = self.info["pageURL"] + self.info["saveID"] + "/" + self.info["bookID"] + "/" + pagenumber + ".jpg"
+            try:
+                r = requests.get(url, timeout=5)
+                r.raise_for_status()
+            except Exception as e:
+                print("\033[1;31m获取图片出错：", str(e) + "页\033[0m")
+                i += 1
+            return r.content
 
     # 保存图片内容到当地
     def Download(self, content, n):
-        root = bookDownload.info["root"] + bookDownload.info["artist"] + "/" + bookDownload.info["title"] + "//"
+        root = self.info["root"] + self.info["artist"] + "/" + self.info["title"] + "//"
         path = root + n.zfill(4)+".jpg"
         try:
             if not os.path.exists("D://HentaiDownloader//"):                                    # 如果hentai下载根目录不存在则创建
                 os.mkdir("D://HentaiDownloader//")
-            if not os.path.exists("D://HentaiDownloader/"+bookDownload.info["artist"]+"//"):    # 如果本子作者根目录不存在则创建
-                os.mkdir("D://HentaiDownloader/"+bookDownload.info["artist"]+"//")
+            if not os.path.exists("D://HentaiDownloader/"+self.info["artist"]+"//"):    # 如果本子作者根目录不存在则创建
+                os.mkdir("D://HentaiDownloader/"+self.info["artist"]+"//")
             if not os.path.exists(root):                                                        # 如果本子根目录不存在则创建
                 os.mkdir(root)
 
@@ -106,25 +113,22 @@ class bookDownload:
                 print("\033[1;36m文件已存在\033[0m")
             pass
         except Exception as e:
-            print("下载出错：", str(e))
+            print("\033[1;31m下载出错：", str(e) + "页\033[0m")
 
     # 下载图片线程调用函数
     def DownloadThread(self, ThreadName):
         while True:
-            print(ThreadName + " 开始运行")
-            bookDownload.lock.acquire()
-            print(ThreadName + " 上锁了")
             downloadPage = ""
+            bookDownload.lock.acquire()
             try:
-                DownloadPage = bookDownload.info["page"]["DownloadNumber"]  # 访问将下载页数
-                if DownloadPage > bookDownload.info["page"]["Number"] :
+                DownloadPage = self.info["page"]["DownloadNumber"]  # 访问将下载页数
+                if DownloadPage > self.info["page"]["Number"]:
                     break
                 downloadPage = str(DownloadPage)
-                bookDownload.info["page"]["DownloadNumber"] = bookDownload.info["page"]["DownloadNumber"] + 1  # 将下载页数+1
+                self.info["page"]["DownloadNumber"] = self.info["page"]["DownloadNumber"] + 1  # 将下载页数+1
             finally:
                 bookDownload.lock.release()
-                print(ThreadName + " 解锁了")
-            print(ThreadName + " 开始下载第" + downloadPage + "页")
+            print("\033[1;33m" + ThreadName + " 开始下载第" + downloadPage + "页\033[0m")
             content = bookDownload.askImageURL(self, downloadPage)
             bookDownload.Download(self, content=content, n=downloadPage)
 
@@ -134,37 +138,32 @@ class bookDownload:
         html = bookDownload.askURL(self)
         bookDownload.Findinfo(self, html)
         print("解析成功")
-        print("本子编号为：" + bookDownload.info["bookID"] + "\n标题为：" + bookDownload.info["title"] +
-              "\n作者为：" + bookDownload.info["artist"] + "\n共" + str(bookDownload.info["page"]["Number"]) + "页")
+        print("本子编号为：" + self.info["bookID"] + "\n标题为：" + self.info["title"] +
+              "\n作者为：" + self.info["artist"] + "\n共" + str(self.info["page"]["Number"]) + "页")
 
-        t1 = threading.Thread(target=bookDownload.DownloadThread(self, "本子"+bookDownload.info["bookID"]+"图片下载线程1"))
-        t2 = threading.Thread(target=bookDownload.DownloadThread(self, "本子"+bookDownload.info["bookID"]+"图片下载线程2"))
-        t3 = threading.Thread(target=bookDownload.DownloadThread(self, "本子"+bookDownload.info["bookID"]+"图片下载线程3"))
+        bookDownload.start = time.time()  # 记录下载开始时间
+
+        t1 = Download_thread("本子"+self.info["bookID"]+"图片下载线程1", self)
+        t2 = Download_thread("本子"+self.info["bookID"]+"图片下载线程2", self)
+        t3 = Download_thread("本子"+self.info["bookID"]+"图片下载线程3", self)
 
         t1.start()
-        print("t1")
         t2.start()
-        print("t2")
         t3.start()
-        print("t3")
 
-        # t1.join()
-        # t2.join()
-        # t3.join()
+        bookDownload.end = time.time()  # 记录下载结束时间
+        print("\033[1;34m本子" + self.info["bookID"] + "下载完成！共用时", str(bookDownload.start - bookDownload.end), "s\033[0m")
 
 class Download_thread(threading.Thread):
-    def __init__(self, thread_id):
-        threading.Thread.__init__(self) # 需要对父类的构造函数进行初始化
+    def __init__(self, thread_id, bookDownload):
+        threading.Thread.__init__(self)     # 需要对父类的构造函数进行初始化
         self.thread_id = thread_id
+        self.DownloadThread = bookDownload
 
     def run(self):
-        print('启动线程：', self.thread_id)
-        self.DownloadThread()
-        print('退出了该线程：', self.thread_id)
-
-    def DownloadThread(self):
-        while True:
-            pass
+        print(self.thread_id, '启动')
+        self.DownloadThread.DownloadThread(self.thread_id)
+        print(self.thread_id, '结束')
 
 
 if (__name__ == "__main__"):
