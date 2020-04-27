@@ -40,18 +40,21 @@ class bookDownload:
     # 发送请求获取网站html
     def askURL(self):
         i = 0
-        while i < 3:    # 断线则重连3次
+        exception = ""
+        while i < 5:    # 断线则重连4次
             url = self.info["bookURL"] + self.info["bookID"]
             html = ""
             try:
                 r = requests.get(url, timeout=5)
                 r.raise_for_status()
                 html = r.text
-                print(html)
             except Exception as e:
-                print("\033[1;31m请求本子网址出错：", str(e) + "页\033[0m")
+                print("\033[1;36m请求本子网址出错!\033[0m\n")
                 i += 1
+                exception = str(e)
+                print("\033[1;36m进行", i, "次重连（最多4次）\033[0m")
             return html
+        print("\033[1;31m进行重连失败，请检查网络连接，错误原因：\n", exception, "\033[0m")
 
     # 获取必要信息
     def Findinfo(self, html):
@@ -83,15 +86,19 @@ class bookDownload:
     # 获取图片内容
     def askImageURL(self, pagenumber):
         i = 0
-        while i < 3:    # 断线则重连3次
+        exception = ""
+        while i < 5:    # 断线则重连4次
             url = self.info["pageURL"] + self.info["saveID"] + "/" + self.info["bookID"] + "/" + pagenumber + ".jpg"
             try:
                 r = requests.get(url, timeout=5)
                 r.raise_for_status()
             except Exception as e:
-                print("\033[1;31m获取图片出错：", str(e) + "页\033[0m")
+                print("\033[1;31m获取图片出错!\033[0m\n", str(e))
+                exception = str(e)
                 i += 1
+                print("\033[1;36m进行", i, "次重连（最多4次）\033[0m")
             return r.content
+        print("\033[1;31m进行重连失败，请检查网络连接，错误原因：\n", exception, "\033[0m")
 
     # 保存图片内容到当地
     def Download(self, content, n):
@@ -113,7 +120,7 @@ class bookDownload:
                 print("\033[1;36m文件已存在\033[0m")
             pass
         except Exception as e:
-            print("\033[1;31m下载出错：", str(e) + "页\033[0m")
+            print("\033[1;31m下载出错!\033[0m\n", str(e))
 
     # 下载图片线程调用函数
     def DownloadThread(self, ThreadName):
@@ -143,16 +150,24 @@ class bookDownload:
 
         bookDownload.start = time.time()  # 记录下载开始时间
 
-        t1 = Download_thread("本子"+self.info["bookID"]+"图片下载线程1", self)
-        t2 = Download_thread("本子"+self.info["bookID"]+"图片下载线程2", self)
-        t3 = Download_thread("本子"+self.info["bookID"]+"图片下载线程3", self)
+        t1 = Download_thread("本子" + self.info["bookID"] + "图片下载线程1", self)
+        t2 = Download_thread("本子" + self.info["bookID"] + "图片下载线程2", self)
+        t3 = Download_thread("本子" + self.info["bookID"] + "图片下载线程3", self)
+        t4 = Download_thread("本子" + self.info["bookID"] + "图片下载线程3", self)
 
         t1.start()
         t2.start()
         t3.start()
+        t4.start()
+
+        t1.join()
+        t2.join()
+        t3.join()
+        t4.join()
 
         bookDownload.end = time.time()  # 记录下载结束时间
-        print("\033[1;34m本子" + self.info["bookID"] + "下载完成！共用时", str(bookDownload.start - bookDownload.end), "s\033[0m")
+        print("\033[1;34m本子" + self.info["bookID"] + "下载完成！共用时", str(bookDownload.end - bookDownload.start),
+              "s\033[0m")
 
 class Download_thread(threading.Thread):
     def __init__(self, thread_id, bookDownload):
