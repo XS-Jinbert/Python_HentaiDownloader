@@ -35,7 +35,7 @@ def DownloadModeONE():
     again = True
     while again:
         bookID = input("\033[1;34m请输入要下载的本子编号：\033[0m")
-        book = bookDownload(bookID)
+        book = bookDownload(bookID, "单本下载")
         book.RunThread()
         again = Again()
         os.system('cls')
@@ -48,7 +48,7 @@ def DownloadModeTWO():
         StartNumber = input("\033[1;34m请输入开始下载的本子编号：\033[0m")
         EndNumber = input("\033[1;34m请输入停止下载的本子编号：\033[0m")
         for i in range(int(StartNumber), int(EndNumber)):
-            book = bookDownload(str(i))
+            book = bookDownload(str(i), "单本下载")
             book.RunThread()
         again = Again()
         os.system('cls')
