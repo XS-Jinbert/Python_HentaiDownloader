@@ -15,9 +15,62 @@ findTitle = re.compile(r'<h2>(.*?)</h2>')
 findSaveID = re.compile(r'images.asmhentai.com/(.*?)/')
 
 def main():
-    bookID = input("请输入本子编号：")
-    book = bookDownload(bookID)
-    book.RunThread()
+    while (True):
+        print("\033[1;31m单线程无界面本子下载器V1.3     By XS-Jinbert From git    文件根目录：D:\\HentaiDownloader\033[0m")
+        node = input(
+            "\033[1;34m请选择你要使用的模式：\033[0m\n\033[1;33m1、指定本子编号下载（请输入1）\n2、指定本子编号范围下载（请输入2）\n3、录入多个本子编号下载（请输入3）\n4、退出（请输入其他）\033[0m\n\033[1;34m请输入：\033[0m")
+        if (node == "1"):
+            again = True
+            while (again):
+                bookID = input("\033[1;34m请输入要下载的本子编号：\033[0m")
+                book = bookDownload(bookID)
+                book.RunThread()
+                again = Again()
+                os.system('cls')
+        elif (node == "2"):
+            again = True
+            while (again):
+                print("\033[1;31m【注意】本作业为单本子4线程下载!\033[0m")
+                StartNumber = input("\033[1;34m请输入开始下载的本子编号：\033[0m")
+                EndNumber = input("\033[1;34m请输入停止下载的本子编号：\033[0m")
+                for i in range(int(StartNumber), int(EndNumber)):
+                    book = bookDownload(str(i))
+                    book.RunThread()
+                again = Again()
+                os.system('cls')
+        elif (node == "3"):
+            again = True
+            while (again):
+                print("\033[1;31m【注意】本作业为单本子4线程下载!\n且没有自查编号功能，请确保你输入的本子编号是正确的！\033[0m")
+                Number = {}
+                n = 1
+                while (True):
+                    addNumber = input("\033[1;34m请开始输入要下载的第" + str(n) + "个本子编号（输入0结束录入）：\033[0m")
+                    if (addNumber == "0"):
+                        break
+                    else:
+                        Number[n] = addNumber
+                        n = n + 1
+                start = time.time()  # 记录下载开始时间
+                for i in Number:
+                    print("\033[1;34m共" + str(n-1) + "本开始下载第" + str(i) + "个本子，编号为:" + Number[i] + " 还剩" + str(
+                        n - 1 - i) + "本\033[0m")
+                    book = bookDownload(Number[i])
+                    book.RunThread()
+                end = time.time()  # 记录下载结束时间
+                print("\033[1;34m下载已完成！共", n-1, "本共用时：" + str(end - start) + "s\033[0m")
+                again = Again()
+                os.system('cls')
+        else:
+            break
+    print("欢迎使用，祝您身体健康，生活愉悦~")
+
+def Again():
+    node = input("是否继续操作？\n1、是（请输入1）\n2、否（请输入2）\n请输入：")
+    if(node == "1"):
+        return True
+    else:
+        return False
 
 class bookDownload:
     lock = threading.RLock()
@@ -48,12 +101,12 @@ class bookDownload:
                 r = requests.get(url, timeout=5)
                 r.raise_for_status()
                 html = r.text
+                return html
             except Exception as e:
                 print("\033[1;36m请求本子网址出错!\033[0m\n")
                 i += 1
                 exception = str(e)
                 print("\033[1;36m进行", i, "次重连（最多4次）\033[0m")
-            return html
         print("\033[1;31m进行重连失败，请检查网络连接，错误原因：\n", exception, "\033[0m")
 
     # 获取必要信息
@@ -63,9 +116,16 @@ class bookDownload:
         right = soup.find_all("div", class_="right")
         right = str(right)
 
-        title = re.findall(findTitle, right)  # 正则表达式收集日文/中文标题
+        title = re.findall(findTitle, right)  # 正则表达式收集日文/中文标题，去掉特殊符号以建立文件夹
         title[0] = title[0].replace("/", "")
-        self.info["title"] = title[0]
+        title[0] = title[0].replace("\\", "")
+        title[0] = title[0].replace("<", "")
+        title[0] = title[0].replace(">", "")
+        title[0] = title[0].replace(":", "")
+        title[0] = title[0].replace("*", "")
+        title[0] = title[0].replace("|", "")
+        title[0] = title[0].replace("?", "")
+        self.info["title"] = self.info["bookID"].zfill(6) + title[0]
 
         page = re.findall(findPage, right)  # 正则表达式收集本子页码
         self.info["page"]["Number"] = int(page[0])
@@ -92,12 +152,12 @@ class bookDownload:
             try:
                 r = requests.get(url, timeout=5)
                 r.raise_for_status()
+                return r.content
             except Exception as e:
                 print("\033[1;31m获取图片出错!\033[0m\n", str(e))
                 exception = str(e)
                 i += 1
                 print("\033[1;36m进行", i, "次重连（最多4次）\033[0m")
-            return r.content
         print("\033[1;31m进行重连失败，请检查网络连接，错误原因：\n", exception, "\033[0m")
 
     # 保存图片内容到当地
@@ -115,7 +175,7 @@ class bookDownload:
             if not os.path.exists(path):
                 with open(path, "wb") as f:
                     f.write(content)
-                    print("\033[1;36m第" + n + "页下载成功！\033[0m")
+                    print("\033[1;36m本子" + self.info["bookID"] + "第" + n + "页下载成功！\033[0m")
             else:
                 print("\033[1;36m文件已存在\033[0m")
             pass
@@ -153,7 +213,7 @@ class bookDownload:
         t1 = Download_thread("本子" + self.info["bookID"] + "图片下载线程1", self)
         t2 = Download_thread("本子" + self.info["bookID"] + "图片下载线程2", self)
         t3 = Download_thread("本子" + self.info["bookID"] + "图片下载线程3", self)
-        t4 = Download_thread("本子" + self.info["bookID"] + "图片下载线程3", self)
+        t4 = Download_thread("本子" + self.info["bookID"] + "图片下载线程4", self)
 
         t1.start()
         t2.start()
