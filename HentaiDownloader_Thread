@@ -9,6 +9,7 @@ import time
 import os
 import re
 
+# 正则表达式寻找规则
 findPage = re.compile(r'<h3>Pages: (.*?)</h3>')
 findArtists = re.compile(r'<div class="tag_list"><a href="/artists/name/(.*?)/"><span class="badge tag">')
 findTitle = re.compile(r'<h2>(.*?)</h2>')
@@ -29,6 +30,7 @@ def main():
             break
     print("欢迎使用，祝您身体健康，生活愉悦~")
 
+# 下载方式1，三线程下载图片
 def DownloadModeONE():
     again = True
     while again:
@@ -38,6 +40,7 @@ def DownloadModeONE():
         again = Again()
         os.system('cls')
 
+# 下载方式2，单线程下载本子，本子三线程下载图片
 def DownloadModeTWO():
     again = True
     while (again):
@@ -50,6 +53,7 @@ def DownloadModeTWO():
         again = Again()
         os.system('cls')
 
+# 下载方式3，3线程下载本子，本子3线程下载图片
 def DownloadModeTHREE():
     again = True
     while (again):
@@ -72,6 +76,7 @@ def DownloadModeTHREE():
         again = Again()
         os.system('cls')
 
+# 是否继续操作
 def Again():
     node = input("是否继续操作？\n1、是（请输入1）\n2、否（请输入2）\n请输入：")
     if(node == "1"):
@@ -79,6 +84,7 @@ def Again():
     else:
         return False
 
+# 本子线程运行类
 class bookDownloadThread:
     lock = threading.RLock()
     start = 0.0
@@ -125,6 +131,7 @@ class bookDownloadThread:
         print("\033[1;34m本次下载完成！共用时", str(bookDownloadThread.end - bookDownloadThread.start),
               "s\033[0m")
 
+# 图片线程运行类
 class bookDownload:
     lock = threading.RLock()
     start = 0.0
@@ -280,7 +287,7 @@ class bookDownload:
         print("\033[1;34m本子" + self.info["bookID"] + "下载完成！共用时", str(bookDownload.end - bookDownload.start),
               "s\033[0m")
 
-
+# 图片下载线程类
 class Download_thread(threading.Thread):
     def __init__(self, thread_id, bookDownload):
         threading.Thread.__init__(self)     # 需要对父类的构造函数进行初始化
@@ -292,9 +299,10 @@ class Download_thread(threading.Thread):
         self.DownloadThread.DownloadThread(self.thread_id)
         print(self.thread_id, '结束')
 
+# 本子下载线程类
 class Book_thread(threading.Thread):
     def __init__(self, thread_id, bookDownloadThread):
-        threading.Thread.__init__(self)     # 需要对父类的构造函数进行初始化
+        threading.Thread.__init__(self)
         self.thread_id = thread_id
         self.DownloadThread = bookDownloadThread
 
